@@ -183,3 +183,280 @@ export default Page
 
 O "use client" no início do arquivo permite que o arquivo seja executado no lado do cliente, ou seja, no navegador. Isso é necessário porque o Next.js executa o código no servidor por padrão e nesse caso estamos utilizando o useEffect que é um hook do React que só pode ser executado no lado do cliente.
 
+## Etapa 5: Login com useContext
+
+Vamos criar um contexto para gerenciar o estado de autenticação do usuário. Crie um novo arquivo `src/context/auth.tsx` e adicione o seguinte código:
+
+```tsx
+"use client"
+import { createContext, useContext, ReactNode, useState } from 'react'
+
+interface IAuthContext {
+  isAuthenticated: boolean
+  login: () => void
+  logout: () => void
+}
+
+const AuthContext = createContext<IAuthContext>({
+  isAuthenticated: false,
+  login: () => {},
+  logout: () => {}
+})
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  const login = () => {
+    setIsAuthenticated(true)
+  }
+
+  const logout = () => {
+    setIsAuthenticated(false)
+  }
+
+  return (
+    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export const useAuth = () => useContext(AuthContext)
+```
+
+Agora, vamos importar o `AuthProvider` no arquivo `layouts.tsx` e envolver a aplicação com o contexto de autenticação:
+
+```tsx
+import { AuthProvider } from '../auth'
+...
+    <AuthProvider>
+        {children}
+    </AuthProvider>
+...
+```
+
+Agora, vamos criar um componente de login em `src/app/login/page.tsx`:
+
+```tsx
+"use client"
+import { useAuth } from "@/context/auth"
+import Link from "next/link"
+
+const Page = () => {
+  const { isAuthenticated, login, logout } = useAuth()
+
+  return (
+    <div className="flex flex-col items-center justify-center h-screen">
+      {isAuthenticated ? (
+        <>
+          <h1 className="text-4xl font-bold">Você está logado!</h1>
+          <button onClick={logout} className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">
+            Logout
+          </button>
+        </>
+      ) : (
+        <>
+          <h1 className="text-4xl font-bold">Faça login</h1>
+          <button onClick={login} className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">
+            Login
+          </button>
+        </>
+      )}
+      <Link href="/todo" className="mt-4 text-blue-500 hover:underline">
+        To-Do List
+      </Link>
+    </div>
+  )
+}
+
+export default Page
+```
+
+No Todo podemos utilizar o useAuth também para verificar se o usuário está autenticado e exibir ou não as tarefas:
+
+```tsx
+"use client" // Permite que o arquivo seja executado no lado do cliente
+import { useEffect, useState } from 'react'
+import { getTodos, ITodo } from './api'
+import { useAuth } from "@/context/auth"
+
+const Page = () => {
+  const [todos, setTodos] = useState<ITodo[]>([]) // Inicializa o estado com um array vazio
+  const { isAuthenticated } = useAuth() // Obtém o estado de autenticação
+
+  useEffect(() => {
+    const fetchTodos = async () => {
+      const data = await getTodos()
+      // Pega apenas os 10 primeiros itens
+      data.splice(10)
+      setTodos(data) // Atualiza o estado com os dados obtidos
+    }
+
+    fetchTodos() // Chama a função fetchTodos
+  }, [])
+
+  return (
+    <div className="flex flex-col items-center justify-center h-screen">
+      <h1 className="text-4xl font-bold">To-Do List</h1>
+      {isAuthenticated ? (
+        <ul className="mt-4">
+          {todos.map(todo => (
+            <li key={todo.id} className="flex items-center">
+              <input type="checkbox" checked={todo.completed} readOnly />
+              <span className="ml-2">{todo.title}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4">Faça login para ver a lista de tarefas</p>
+      )}
+    </div>
+  )
+}
+
+export default Page
+```
+
+## Etapa 6: Ajustando a tela de login para chamar a API de autenticação
+
+Vamos criar uma API de autenticação para simular o login e logout do usuário. Essa API vai estar rodando no endereco `http://localhost:3001/api/users/authenticate` e vai retornar um token JWT para o usuário autenticado. A rota espera receber um objeto com os campos `email` e `password` e retorna um objeto com o campo `token`.
+
+Crie um novo arquivo `src/app/login/api.ts` e adicione o seguinte código:
+
+```tsx
+export interface ILoginRequest {
+  email: string
+  password: string
+}
+
+export interface ILoginResponse {
+  token: string
+}
+
+export const login = async (data: ILoginRequest): Promise<ILoginResponse> => {
+  const response = await fetch('http://localhost:3001/api/users/authenticate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  })
+
+  return await response.json()
+}
+```
+
+Agora, vamos importar a função `login` no arquivo `src/app/login/page.tsx` e adicionar a lógica de autenticação:
+
+```tsx
+"use client"
+
+import { useAuth } from "@/context/auth"
+import Link from "next/link"
+import { useState } from "react"
+import { login as loginApi } from "./api"
+
+const Page = () => {
+  const { isAuthenticated, login, logout } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  const handleLogin = async () => {
+    try {
+      const { token } = await loginApi({ email, password }
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+      localStorage.setItem('token', token) // Salva o token no localStorage
+      login()
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center h-screen">
+      {isAuthenticated ? (
+        <>
+          <h1 className="text-4xl font-bold">Você está logado!</h1>
+          <button onClick={logout} className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">
+            Logout
+          </button>
+        </>
+      ) : (
+        <>
+          <h1 className="text-4xl font-bold">Faça login</h1>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mt-4 px-4 py-2 border border-gray-300 rounded"
+          />
+          <input
+            type="password"
+            placeholder="Senha"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-4 px-4 py-2 border border-gray-300 rounded"
+          />
+          <button onClick={handleLogin} className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">
+            Login
+          </button>
+        </>
+      )}
+      <Link href="/todo" className="mt-4 text-blue-500 hover:underline">
+        To-Do List
+      </Link>
+    </div>
+  )
+}
+
+export default Page
+```
+
+Com o token salvo no localStorage, podemos verificar se o usuário está autenticado ao recarregar a página. Vamos adicionar a lógica de autenticação no arquivo `src/app/page.tsx`:
+
+```tsx
+"use client"
+import { useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+
+const Page = () => {
+  const router = useRouter()
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      // Redireciona para a página de To-Do List se o usuário estiver autenticado e se não estiver na página de login usando o Router do Next.js
+      router.push('/todo')
+    }
+  }, [router])
+
+  return (
+    <div className="flex flex-col items-center justify-center h-screen">
+      <h1 className="text-4xl font-bold">Primeiro projeto com NextJs</h1>
+      <Link href="/todo" className="mt-4 text-blue-500 hover:underline">
+        To-Do List
+      </Link>
+    </div>
+  )
+}
+
+export default Page
+```
+
+Agora se uma rota precisar do Token podemos recuperar essa informação a partir do localStorage e enviar no header da requisição. Por exemplo, vamos adicionar o token no header da requisição para a API de To-Do List:
+
+```tsx
+export const getTodos = async (): Promise<ITodo[]> => {
+  const token = localStorage.getItem('token')
+  const response = await fetch('https://jsonplaceholder.typicode.com/todos', {
+    headers: {
+      Authorization: `Bearer ${token}` // Adiciona o token no header da requisição
+    }
+  })
+  return await response.json()
+}
+```

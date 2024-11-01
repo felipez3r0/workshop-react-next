@@ -1,9 +1,11 @@
 "use client" // Permite que o arquivo seja executado no lado do cliente
 import { useEffect, useState } from 'react'
 import { getTodos, ITodo } from './api'
+import { useAuth } from "@/context/auth"
 
 const Page = () => {
   const [todos, setTodos] = useState<ITodo[]>([]) // Inicializa o estado com um array vazio
+  const { isAuthenticated } = useAuth() // Obtém o estado de autenticação
 
   useEffect(() => {
     const fetchTodos = async () => {
@@ -19,11 +21,18 @@ const Page = () => {
   return (
     <div className="flex flex-col items-center justify-center h-screen">
       <h1 className="text-4xl font-bold">To-Do List</h1>
-      <ul className="mt-4">
-        {todos.map((todo) => ( // Percorre o array de todos e renderiza cada item
-          <li key={todo.id}>{todo.title}</li>
-        ))}
-      </ul>
+      {isAuthenticated ? (
+        <ul className="mt-4">
+          {todos.map(todo => (
+            <li key={todo.id} className="flex items-center">
+              <input type="checkbox" checked={todo.completed} readOnly />
+              <span className="ml-2">{todo.title}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4">Faça login para ver a lista de tarefas</p>
+      )}
     </div>
   )
 }
