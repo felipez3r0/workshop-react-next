@@ -470,3 +470,36 @@ Acesse o link [Vercel - Novo projeto](https://vercel.com/new) e selecione o repo
 Clique em "Continue" e siga os passos para configurar o projeto. Selecione o diretório do projeto e clique em "Deploy".
 
 Aguarde o processo de deploy e acesse o link gerado para visualizar a aplicação em produção.
+
+## Etapa 8: Adicionando Page Speed Insights
+
+Para adicionar o Page Speed Insights da Vercel vamos adicionar o pacote:
+
+```bash
+npm i @vercel/speed-insights
+```
+
+Em seguida adicionamos ao arquivo principal do projeto o seguinte componente:
+
+```tsx
+import { SpeedInsights } from "@vercel/speed-insights/next";
+...
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+        <SpeedInsights />
+      </body>
+    </html>
+  );
+}
+```
