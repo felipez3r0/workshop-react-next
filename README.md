@@ -460,3 +460,13 @@ export const getTodos = async (): Promise<ITodo[]> => {
   return await response.json()
 }
 ```
+
+## Etapa 7: Deploy na Vercel
+
+Para fazer o deploy da aplicação na Vercel, primeiro você precisa criar uma conta no site [Vercel](https://vercel.com/). Depois, siga os passos abaixo:
+
+Acesse o link [Vercel - Novo projeto](https://vercel.com/new) e selecione o repositório do seu projeto no GitHub, GitLab ou Bitbucket.
+
+Clique em "Continue" e siga os passos para configurar o projeto. Selecione o diretório do projeto e clique em "Deploy".
+
+Aguarde o processo de deploy e acesse o link gerado para visualizar a aplicação em produção.
